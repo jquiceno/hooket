@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "NODE_ENV=dev supervisor app.js",
-    "init": "pm2 start app.js --name TalklyServer",
+    "init": "pm2 start app.js --name HooketServer",
     "start": "node app.js",
     "lint": "standard",
     "test": "npm run lint && ava -sv ./test/*.test.js",
@@ -19,12 +19,12 @@
   "author": "jquiceno",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jquiceno/talkly.git/issues"
+    "url": "https://github.com/jquiceno/hooket/issues"
   },
-  "homepage": "https://github.com/jquiceno/talkly.git",
+  "homepage": "https://github.com/jquiceno/hooket",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jquiceno/talkly.git"
+    "url": "https://github.com/jquiceno/hooket.git"
   },
   "dependencies": {
     "@hapi/boom": "^7.4.2",
