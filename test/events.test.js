@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('ava')
-const { Server } = require('..')
+const { Server, Cli } = require('..')
 const Io = require('socket.io-client')
 const request = require('request-promise')
 const uuid = require('uuid/v4')
@@ -9,8 +9,16 @@ const Moment = require('moment')
 const S = require('servfi')
 const delay = require('delay')
 
+let cli = null
+
 test.before(async t => {
   const server = await Server.start()
+
+  cli = new Cli({
+    url: server.info.uri,
+    fullResponse: true
+  })
+
   t.context.serverInfo = server.info
 })
 
@@ -33,23 +41,13 @@ test('Push socket event message', async t => {
   const serverUri = serverInfo.uri
   const eventName = `event.${uuid()}`
 
-  await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: {
-      event: eventName
-    }
+  await cli.add({
+    event: eventName
   })
 
   const socket = Io(serverUri)
 
-  const res = await request({
-    uri: `${serverUri}/${eventName}`,
-    method: 'POST',
-    json: true,
-    body: serverInfo
-  })
+  const res = await cli.emit(eventName, serverInfo)
 
   const socketEvent = await new Promise((resolve, reject) => {
     socket.on(eventName, (data) => {
@@ -67,7 +65,6 @@ test('Push socket event message', async t => {
 })
 
 test('Add new event', async t => {
-  const serverUri = t.context.serverInfo.uri
   const eventName = `event.${uuid()}`
   const date = Moment().date()
 
@@ -75,12 +72,7 @@ test('Add new event', async t => {
     event: eventName
   }
 
-  const res = await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: eventData
-  })
+  const res = await cli.add(eventData)
 
   t.deepEqual(res.statusCode, 201)
   t.is(typeof res.data, 'object')
@@ -92,13 +84,8 @@ test('Get All events', async t => {
   const serverUri = t.context.serverInfo.uri
   const eventName = `event.${uuid()}`
 
-  await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: {
-      event: eventName
-    }
+  await cli.add({
+    event: eventName
   })
 
   const res = await request({
@@ -117,13 +104,8 @@ test('Get event by id', async t => {
   const serverUri = t.context.serverInfo.uri
   const eventName = `event.${uuid()}`
 
-  let res = await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: {
-      event: eventName
-    }
+  let res = await await cli.add({
+    event: eventName
   })
 
   const newEvent = res.data
@@ -143,13 +125,8 @@ test('Get event by eventName', async t => {
   const serverUri = t.context.serverInfo.uri
   const eventName = `event.${uuid()}`
 
-  let res = await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: {
-      event: eventName
-    }
+  let res = await cli.add({
+    event: eventName
   })
 
   const newEvent = res.data
@@ -170,13 +147,8 @@ test('Remove event by id', async t => {
   const serverUri = t.context.serverInfo.uri
   const eventName = `event.${uuid()}`
 
-  let res = await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: {
-      event: eventName
-    }
+  let res = await cli.add({
+    event: eventName
   })
 
   const newEvent = res.data
@@ -214,16 +186,11 @@ test('Request webHooks', async t => {
   const serverUri = t.context.serverInfo.uri
   const eventName = `event.${uuid()}`
 
-  let res = await request({
-    uri: `${serverUri}/events`,
-    method: 'POST',
-    json: true,
-    body: {
-      event: eventName,
-      webHooks: [
-        server.uri
-      ]
-    }
+  let res = await cli.add({
+    event: eventName,
+    webHooks: [
+      server.uri
+    ]
   })
 
   t.deepEqual(res.data.event, eventName)
