@@ -1,0 +1,45 @@
+{
+  "name": "hooket",
+  "version": "0.0.1",
+  "description": "Decentralized event communication system for micro service through socket IO and webhooks",
+  "main": "index.js",
+  "scripts": {
+    "dev": "NODE_ENV=dev supervisor app.js",
+    "init": "pm2 start app.js --name TalklyServer",
+    "start": "node app.js",
+    "lint": "standard",
+    "test": "npm run lint && ava -sv ./test/*.test.js",
+    "test:dev": "ava -svw"
+  },
+  "keywords": [
+    "events",
+    "socketio",
+    "services"
+  ],
+  "author": "jquiceno",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jquiceno/talkly.git/issues"
+  },
+  "homepage": "https://github.com/jquiceno/talkly.git",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jquiceno/talkly.git"
+  },
+  "dependencies": {
+    "@hapi/boom": "^7.4.2",
+    "ava": "^2.2.0",
+    "firebase-admin": "^8.3.0",
+    "pm2": "^3.5.1",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.4",
+    "servfi": "0.0.4",
+    "socket.io": "^2.2.0",
+    "socket.io-client": "^2.2.0"
+  },
+  "devDependencies": {
+    "delay": "^4.3.0",
+    "standard": "^13.1.0",
+    "supervisor": "^0.12.0"
+  }
+}
