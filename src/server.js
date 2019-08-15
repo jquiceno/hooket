@@ -5,7 +5,7 @@ const { server: Server } = require('servfi')
 const routes = require('./routes')
 
 async function start ({ port = null } = {}) {
-  port = process.env.PORT || process.env.TALKLY_PORT || port
+  port = process.env.PORT || process.env.HOOKET_PORT || port
 
   const server = Server({
     port
@@ -17,7 +17,7 @@ async function start ({ port = null } = {}) {
 
   await server.start()
 
-  console.log(`Talkly server start in port: ${server.info.port}`)
+  console.log(`Hooket server start in port: ${server.info.port}`)
 
   // io.origins((origin, fn) => {
   //   // console.log(origin)

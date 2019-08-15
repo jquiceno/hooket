@@ -1,5 +1,5 @@
-# gcloud builds submit --tag gcr.io/pimex-services/talkly
-# gcloud beta run deploy --image gcr.io/pimex-services/talkly --platform managed --region us-central1 --allow-unauthenticated
+# gcloud builds submit --tag gcr.io/pimex-services/hooket:0.0.1
+# gcloud beta run deploy --image gcr.io/pimex-services/hooket --platform managed --region us-central1 --allow-unauthenticated
 FROM node:10
 
 # Create and change to the app directory.

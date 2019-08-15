@@ -11,8 +11,6 @@ const delay = require('delay')
 
 test.before(async t => {
   const server = await Server.start()
-  server.info.uri = 'https://talkly-fkanqcycfq-uc.a.run.app'
-  console.log(server.info)
   t.context.serverInfo = server.info
 })
 
