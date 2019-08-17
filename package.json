@@ -1,6 +1,6 @@
 {
   "name": "hooket",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Decentralized event communication system for micro service through socket IO and webhooks",
   "main": "index.js",
   "scripts": {
