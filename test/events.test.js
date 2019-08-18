@@ -1,7 +1,8 @@
 'use strict'
 
 const test = require('ava')
-const { Server, Cli } = require('..')
+const Server = require('..')
+const Cli = require('hooket-cli')
 const Io = require('socket.io-client')
 const request = require('request-promise')
 const uuid = require('uuid/v4')

@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "delay": "^4.3.0",
+    "hooket-cli": "0.0.1",
     "standard": "^13.1.0",
     "supervisor": "^0.12.0"
   }
