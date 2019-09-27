@@ -1,13 +1,13 @@
 'use strict'
 
 const Io = require('socket.io')
-const { server: Server } = require('servfi')
+const Hapi = require('@hapi/hapi')
 const routes = require('./routes')
 
 async function start ({ port = null } = {}) {
   port = process.env.PORT || process.env.HOOKET_PORT || port
 
-  const server = Server({
+  const server = Hapi.server({
     port
   })
 
