@@ -15,11 +15,19 @@ class Event {
     this.id = id
   }
 
-  static async getAll () {
+  static async getAll (params) {
     try {
-      const events = []
-      const query = await db.get()
+      let query = db
 
+      if (params.where) {
+        query = query.where(params.where.key, '==', params.where.value)
+      }
+
+      query = await query.get()
+
+      if (query.empty) return Promise.resolve([])
+
+      const events = []
       query.forEach(eventRef => {
         const eventData = eventRef.data()
         eventData.id = eventRef.id
@@ -36,7 +44,7 @@ class Event {
     try {
       data.created = Moment().unix()
       data.updated = data.created
-      data.lastUsed = data.created
+      data.lastUsed = false
 
       const ref = db.doc()
       await ref.set(data)
@@ -87,6 +95,65 @@ class Event {
       const eventRef = db.doc(this.id)
       await eventRef.delete()
       return Promise.resolve(eventData)
+    } catch (e) {
+      return Promise.reject(new Boom(e))
+    }
+  }
+
+  async webHookSend (message) {
+    try {
+      const response = {
+        success: {},
+        error: {}
+      }
+      const eventData = await this.get()
+
+      if (!eventData.webHooks) {
+        return Promise.resolve([])
+      }
+
+      for (const key in eventData.webHooks) {
+        const url = eventData.webHooks[key]
+
+        try {
+          const res = await request({
+            method: 'POST',
+            resolveWithFullResponse: true,
+            url,
+            body: {
+              event: eventData.id,
+              message
+            },
+            json: true
+          })
+
+          response.success[url] = res.body.statusCode || res.statusCode || 200
+        } catch (e) {
+          response.error[url] = e.error.statusCode || e.error.code
+        }
+      }
+
+      return Promise.resolve(response)
+    } catch (e) {
+      return Promise.reject(new Boom(e))
+    }
+  }
+
+  async update (data) {
+    try {
+      try {
+        let eventData = await this.get()
+        const eventRef = db.doc(eventData.id)
+        data.updated = Moment().unix()
+
+        await eventRef.update(data)
+
+        eventData = await this.get()
+
+        return Promise.resolve(eventData)
+      } catch (e) {
+        return Promise.reject(new Boom(e))
+      }
     } catch (e) {
       return Promise.reject(new Boom(e))
     }

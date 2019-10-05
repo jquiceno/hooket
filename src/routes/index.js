@@ -2,139 +2,170 @@
 
 const Event = require('../lib/event')
 const Boom = require('@hapi/boom')
-const request = require('request')
+const Moment = require('moment')
 
-module.exports = io => [{
-  path: '/events/{eventId}',
-  method: 'GET',
-  async handler (req, h) {
-    let res = {}
-    const eventId = req.params.eventId
+function errorHandler (error, req = false, h) {
+  error = new Boom(error)
+  // req.log(('error', error))
+  console.error('error', error)
+  const res = error.output.payload
 
-    try {
-      const event = new Event(eventId)
-      const eventData = await event.get()
+  return h.response(res).code(res.statusCode)
+}
 
-      res = {
-        data: eventData,
-        statusCode: 200
+module.exports = io => {
+  return [{
+    path: '/events/{eventId}',
+    method: 'GET',
+    async handler (req, h) {
+      let res = {}
+      const eventId = req.params.eventId
+
+      try {
+        const event = new Event(eventId)
+        const eventData = await event.get()
+
+        res = {
+          data: eventData,
+          statusCode: 200
+        }
+      } catch (e) {
+        console.log(e)
+        res = e.output.payload
       }
-    } catch (e) {
-      console.log(e)
-      res = e.output.payload
+
+      return h.response(res).code(res.statusCode)
     }
+  },
+  {
+    path: '/events',
+    method: 'GET',
+    async handler (req, h) {
+      let res = {}
 
-    return h.response(res).code(res.statusCode)
-  }
-},
-{
-  path: '/events',
-  method: 'GET',
-  async handler (req, h) {
-    let res = {}
+      try {
+        const events = await Event.getAll()
 
-    try {
-      const events = await Event.getAll()
-
-      res = {
-        data: events,
-        statusCode: 200
+        res = {
+          data: events,
+          statusCode: 200
+        }
+      } catch (e) {
+        res = e
       }
-    } catch (e) {
-      res = e
+
+      return h.response(res).code(res.statusCode)
     }
+  },
+  {
+    path: '/events',
+    method: 'POST',
+    async handler (req, h) {
+      let res = {}
 
-    return h.response(res).code(res.statusCode)
-  }
-},
-{
-  path: '/events',
-  method: 'POST',
-  async handler (req, h) {
-    let res = {}
+      try {
+        const data = req.payload
 
-    try {
-      const data = req.payload
+        const event = await Event.add(data)
 
-      const event = await Event.add(data)
-
-      res = {
-        data: event,
-        statusCode: 201
+        res = {
+          data: event,
+          statusCode: 201
+        }
+      } catch (e) {
+        res = e
       }
-    } catch (e) {
-      res = e
+
+      return h.response(res).code(res.statusCode)
     }
+  },
+  {
+    path: '/{eventId}',
+    method: 'POST',
+    async handler (req, h) {
+      try {
+        const eventId = req.params.eventId
+        const data = req.payload
 
-    return h.response(res).code(res.statusCode)
-  }
-},
-{
-  path: '/{eventId}',
-  method: 'POST',
-  async handler (req, h) {
-    const eventId = req.params.eventId
-    const data = req.payload
-    let res = {}
-
-    try {
-      const event = new Event(eventId)
-
-      event.get()
-        .then(async eventData => {
-          if (eventData.webHooks) {
-            await Promise.all(eventData.webHooks.map(w => {
-              request({
-                method: 'POST',
-                url: w,
-                body: data,
-                json: true
-              })
-            }))
+        const events = await Event.getAll({
+          where: {
+            key: 'event',
+            value: eventId
           }
-
-          return io.emit(eventId, data)
-        })
-        .catch(err => {
-          console.log(err)
-          throw new Error(err)
         })
 
-      res = {
-        data: {
-          eventId: eventId,
-          body: data
-        },
-        statusCode: 200
+        const eventData = (!events.length) ? await Event.add({
+          event: eventId
+        }) : events[0]
+
+        const event = new Event(eventData.id)
+
+        io.emit(eventId, data)
+
+        const webHooksSends = await event.webHookSend(data)
+
+        await event.update({
+          lastUsed: Moment().unix()
+        })
+
+        const res = {
+          data: {
+            event: eventId,
+            socket: 200,
+            webHooks: webHooksSends,
+            message: data
+          },
+          statusCode: 200
+        }
+
+        return h.response(res).code(res.statusCode)
+      } catch (e) {
+        return errorHandler(e, req, h)
       }
-    } catch (e) {
-      const err = new Boom(e)
-      req.log('error', err)
-      res = err.output.payload
     }
+  },
+  {
+    path: '/events/{eventId}',
+    method: 'DELETE',
+    async handler (req, h) {
+      const { eventId = null } = req.params
+      let res = {}
 
-    return h.response(res).code(res.statusCode)
-  }
-}, {
-  path: '/events/{eventId}',
-  method: 'DELETE',
-  async handler (req, h) {
-    const { eventId = null } = req.params
-    let res = {}
+      try {
+        const event = new Event(eventId)
+        const eventData = await event.remove()
 
-    try {
-      const event = new Event(eventId)
-      const eventData = await event.remove()
-
-      res = {
-        data: eventData,
-        statusCode: 200
+        res = {
+          data: eventData,
+          statusCode: 200
+        }
+      } catch (e) {
+        console.log(e)
+        res = (e.isBoom) ? e : new Boom(e)
       }
-    } catch (e) {
-      console.log(e)
-      res = (e.isBoom) ? e : new Boom(e)
-    }
 
-    return h.response(res).code(res.statusCode)
-  }
-}]
+      return h.response(res).code(res.statusCode)
+    }
+  },
+  {
+    path: '/events/{eventId}',
+    method: 'PUT',
+    async handler (req, h) {
+      try {
+        const { params, payload } = req
+        const { eventId = null } = params
+        const event = new Event(eventId)
+        const eventData = await event.update(payload)
+
+        const res = {
+          data: eventData,
+          statusCode: 200
+        }
+
+        return h.response(res).code(res.statusCode)
+      } catch (e) {
+        return errorHandler(e, req, h)
+      }
+    }
+  }]
+}
