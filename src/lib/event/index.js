@@ -4,6 +4,7 @@ const Boom = require('@hapi/boom')
 const Db = require('../db')
 const dbKey = require('../../../db-key.json')
 const Moment = require('moment')
+const request = require('request-promise')
 
 const db = Db.init(dbKey, {
   type: 'firestore',
