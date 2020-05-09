@@ -7,20 +7,17 @@ const Io = require('socket.io-client')
 const request = require('request-promise')
 const uuid = require('uuid/v4')
 const Moment = require('moment')
-const S = require('servfi')
-const delay = require('delay')
-
-let cli = null
+const Hapi = require('@hapi/hapi')
 
 test.before(async t => {
-  const server = await Server.start()
+  const { info } = await Server.start()
 
-  cli = new Cli({
-    url: server.info.uri,
+  t.context.cli = new Cli({
+    url: info.uri,
     fullResponse: true
   })
 
-  t.context.serverInfo = server.info
+  t.context.serverInfo = info
 })
 
 test('Socket connect', async t => {
@@ -28,7 +25,7 @@ test('Socket connect', async t => {
   const socket = Io(serverUri)
 
   const connected = await new Promise((resolve, reject) => {
-    socket.on('connect', () => {
+    socket.on('connect', (e) => {
       resolve(true)
     })
   })
@@ -38,7 +35,7 @@ test('Socket connect', async t => {
 })
 
 test('Push socket event message', async t => {
-  const serverInfo = t.context.serverInfo
+  const { serverInfo, cli } = t.context
   const serverUri = serverInfo.uri
   const eventName = `event.${uuid()}`
 
@@ -48,24 +45,20 @@ test('Push socket event message', async t => {
 
   const socket = Io(serverUri)
 
-  const res = await cli.emit(eventName, serverInfo)
-
-  const socketEvent = await new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     socket.on(eventName, (data) => {
+      t.is(typeof data, 'object')
+      t.deepEqual(data.uri, serverUri)
+      t.deepEqual(data.port, serverInfo.port)
       resolve(data)
     })
-  })
 
-  t.deepEqual(res.statusCode, 200)
-  t.is(typeof res.data, 'object')
-  t.is(typeof socketEvent, 'object')
-  t.deepEqual(res.data.eventId, eventName)
-  t.deepEqual(res.data.body.uri, serverUri)
-  t.deepEqual(socketEvent.uri, serverUri)
-  t.deepEqual(socketEvent.port, serverInfo.port)
+    cli.emit(eventName, serverInfo)
+  })
 })
 
 test('Add new event', async t => {
+  const { cli } = t.context
   const eventName = `event.${uuid()}`
   const date = Moment().date()
 
@@ -82,7 +75,8 @@ test('Add new event', async t => {
 })
 
 test('Get All events', async t => {
-  const serverUri = t.context.serverInfo.uri
+  const { cli, serverInfo } = t.context
+  const serverUri = serverInfo.uri
   const eventName = `event.${uuid()}`
 
   await cli.add({
@@ -102,7 +96,8 @@ test('Get All events', async t => {
 })
 
 test('Get event by id', async t => {
-  const serverUri = t.context.serverInfo.uri
+  const { cli, serverInfo } = t.context
+  const serverUri = serverInfo.uri
   const eventName = `event.${uuid()}`
 
   let res = await await cli.add({
@@ -123,7 +118,8 @@ test('Get event by id', async t => {
 })
 
 test('Get event by eventName', async t => {
-  const serverUri = t.context.serverInfo.uri
+  const { cli, serverInfo } = t.context
+  const serverUri = serverInfo.uri
   const eventName = `event.${uuid()}`
 
   let res = await cli.add({
@@ -145,7 +141,8 @@ test('Get event by eventName', async t => {
 })
 
 test('Remove event by id', async t => {
-  const serverUri = t.context.serverInfo.uri
+  const { cli, serverInfo } = t.context
+  const serverUri = serverInfo.uri
   const eventName = `event.${uuid()}`
 
   let res = await cli.add({
@@ -167,49 +164,31 @@ test('Remove event by id', async t => {
 })
 
 test('Request webHooks', async t => {
-  const message = 'this message'
-  const server = await S.start({
-    routes: [{
-      path: '/',
-      method: 'POST',
-      handler (request, h) {
-        const data = request.payload
-
-        t.deepEqual(data.message, message)
-
-        return h.response({
-          ok: true
-        }).code(200)
-      }
-    }]
-  })
-
-  const serverUri = t.context.serverInfo.uri
+  const { cli } = t.context
   const eventName = `event.${uuid()}`
+  const message = 'this message'
+  const server = Hapi.server()
 
-  let res = await cli.add({
-    event: eventName,
-    webHooks: [
-      server.uri
-    ]
-  })
-
-  t.deepEqual(res.data.event, eventName)
-  t.is(typeof res.data.webHooks, 'object')
-  t.deepEqual(res.data.webHooks[0], server.uri)
-  t.deepEqual(res.statusCode, 201)
-
-  res = await request({
-    uri: `${serverUri}/${res.data.id}`,
+  server.route({
+    path: '/',
     method: 'POST',
-    json: true,
-    body: {
-      message
+    handler ({ payload }, h) {
+      t.deepEqual(payload.message, message)
+
+      return h.response({
+        ok: true
+      }).code(200)
     }
   })
 
-  await delay(5000)
+  await server.start()
 
-  t.deepEqual(res.statusCode, 200)
-  t.deepEqual(res.data.body.message, message)
+  await cli.add({
+    event: eventName,
+    webHooks: [
+      server.info.uri
+    ]
+  })
+
+  await cli.emit(eventName, message)
 })

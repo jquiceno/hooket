@@ -41,20 +41,18 @@ module.exports = io => {
     path: '/events',
     method: 'GET',
     async handler (req, h) {
-      let res = {}
-
       try {
         const events = await Event.getAll()
 
-        res = {
+        const res = {
           data: events,
           statusCode: 200
         }
-      } catch (e) {
-        res = e
-      }
 
-      return h.response(res).code(res.statusCode)
+        return h.response(res).code(res.statusCode)
+      } catch (e) {
+        return errorHandler(e, req, h)
+      }
     }
   },
   {

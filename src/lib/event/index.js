@@ -16,7 +16,7 @@ class Event {
     this.id = id
   }
 
-  static async getAll (params) {
+  static async getAll (params = {}) {
     try {
       let query = db
 
@@ -142,19 +142,15 @@ class Event {
 
   async update (data) {
     try {
-      try {
-        let eventData = await this.get()
-        const eventRef = db.doc(eventData.id)
-        data.updated = Moment().unix()
+      let eventData = await this.get()
+      const eventRef = db.doc(eventData.id)
+      data.updated = Moment().unix()
 
-        await eventRef.update(data)
+      await eventRef.update(data)
 
-        eventData = await this.get()
+      eventData = await this.get()
 
-        return Promise.resolve(eventData)
-      } catch (e) {
-        return Promise.reject(new Boom(e))
-      }
+      return Promise.resolve(eventData)
     } catch (e) {
       return Promise.reject(new Boom(e))
     }
