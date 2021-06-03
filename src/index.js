@@ -1,5 +1,5 @@
 'use strict'
 
-const Server = require('./src/server')
+const Server = require('./server')
 
 module.exports = Server
