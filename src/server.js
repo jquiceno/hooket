@@ -1,6 +1,6 @@
 'use strict'
 
-const Io = require('socket.io')
+const { Server: IoServer } = require('socket.io')
 const Hapi = require('@hapi/hapi')
 const routes = require('./routes')
 
@@ -8,14 +8,27 @@ async function start ({ port = null } = {}) {
   port = process.env.PORT || process.env.HOOKET_PORT || port
 
   const server = Hapi.server({
-    port
+    port,
+    routes: {
+      cors: {
+        origin: ['*']
+      }
+    }
   })
 
-  const io = Io(server.listener)
+  const io = new IoServer(server.listener, {
+    cors: {
+      origin: '*'
+    }
+  })
 
   await server.route(routes(io))
 
   await server.start()
+
+  io.on('connection', (socket) => {
+    console.log('connected', socket.id)
+  })
 
   console.log(`Hooket server start in port: ${server.info.port}`)
 
