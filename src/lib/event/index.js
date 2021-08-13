@@ -3,8 +3,7 @@
 const Boom = require('@hapi/boom')
 const Db = require('../db')
 const dbKey = require('../../../db-key.json')
-const Moment = require('moment')
-const request = require('request-promise')
+const axios = require('axios')
 
 const db = Db.init(dbKey, {
   type: 'firestore',
@@ -43,7 +42,7 @@ class Event {
 
   static async add (data) {
     try {
-      data.created = Moment().unix()
+      data.created = new Date()
       data.updated = data.created
       data.lastUsed = false
 
@@ -117,18 +116,16 @@ class Event {
         const url = eventData.webHooks[key]
 
         try {
-          const res = await request({
+          const res = await axios({
             method: 'POST',
-            resolveWithFullResponse: true,
             url,
-            body: {
+            data: {
               event: eventData.id,
               message
-            },
-            json: true
+            }
           })
 
-          response.success[url] = res.body.statusCode || res.statusCode || 200
+          response.success[url] = res.data.statusCode || res.statusCode || 200
         } catch (e) {
           response.error[url] = e.error.statusCode || e.error.code
         }
@@ -144,7 +141,7 @@ class Event {
     try {
       let eventData = await this.get()
       const eventRef = db.doc(eventData.id)
-      data.updated = Moment().unix()
+      data.updated = new Date()
 
       await eventRef.update(data)
 
