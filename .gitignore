@@ -2,3 +2,4 @@ node_modules
 *-ignore.*
 *-ignore
 *-key.json
+.env
