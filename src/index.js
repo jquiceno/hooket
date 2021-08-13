@@ -2,4 +2,6 @@
 
 const Server = require('./server')
 
-module.exports = Server
+module.exports = {
+  Server
+}

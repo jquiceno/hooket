@@ -3,34 +3,53 @@
 const { Server: IoServer } = require('socket.io')
 const Hapi = require('@hapi/hapi')
 const routes = require('./routes')
+const laabr = require('laabr')
+const Event = require('./lib/event')
+const { config } = require('getfig')
 
-async function start ({ port = null } = {}) {
-  port = process.env.PORT || process.env.HOOKET_PORT || port
+const { PORT, HOOKET_PORT } = config.get('env')
 
+async function start ({ port = PORT || HOOKET_PORT } = {}) {
   const server = Hapi.server({
     port,
     routes: {
       cors: {
         origin: ['*']
       }
+    },
+    router: {
+      stripTrailingSlash: true
     }
+  })
+
+  await server.register([laabr])
+
+  server.decorate('toolkit', 'success', function (data) {
+    const { method } = this.request
+    const statusCode = (method === 'post') ? 201 : 200
+
+    return this.response({
+      data,
+      statusCode
+    }).code(statusCode)
   })
 
   const io = new IoServer(server.listener, {
     cors: {
-      origin: '*'
+      origin: '*',
+      credentials: true
     }
   })
 
-  await server.route(routes(io))
+  io.on('connection', (socket) => {
+    server.log('info', `connected socket ${socket.id}`)
+  })
+
+  await server.route(routes(io, Event))
 
   await server.start()
 
-  io.on('connection', (socket) => {
-    console.log('connected', socket.id)
-  })
-
-  console.log(`Hooket server start in port: ${server.info.port}`)
+  return server
 
   // io.origins((origin, fn) => {
   //   // console.log(origin)
@@ -57,8 +76,6 @@ async function start ({ port = null } = {}) {
   //     console.log(`Disconnected!`)
   //   })
   // })
-
-  return server
 }
 
 module.exports = {
