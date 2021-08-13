@@ -5,5 +5,5 @@ module.exports = {
   env: {
     node: true
   },
-  extends: [ 'standard' ]
+  extends: ['standard']
 }
